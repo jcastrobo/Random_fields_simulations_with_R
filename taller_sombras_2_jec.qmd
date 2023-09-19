@@ -1,0 +1,134 @@
+---
+title: "taller"
+author: "John Erick Castro"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library(usdm)
+library(raster)
+library(gstat)
+library(tidyverse)
+```
+
+```{r}
+r<-read.csv2("Datos2.csv", dec=",", sep = "")
+f <- r %>% 
+     mutate_at(c(2:19), as.numeric)
+f
+```
+
+```{r}
+f<-f%>%
+  drop_na()
+```
+
+```{r}
+stand<-f%>%mutate_at (c ('C1', 'Duración_.min._pl', 'Intensidad_media.pl',
+       'Intensidad_máxima_pl', 'Intensidad_continuap_pl', 'C_.mm_est',
+       'Duración_.min._esta', 'Intensidad_media_est', 'Intensidad_máxima_est',
+       'Intensidad_continua_est', 'Lluvia.antecedent_24.horas_pluv',
+       'Lluvia.antecedent_24_horas_esta', 'Lluvia.antecedent_48_horas_pluv',
+       'Lluvia_antecedent_48_horas_est', 'Trespuesta_.min._plub',
+       'Trespuesta_est', 'Q_inicial'), ~ ( scale (.)%>% as.vector ))
+stand
+a<-prcomp(x=stand[, c(2:19)], center = TRUE, scale. = TRUE)
+
+```
+
+```{r}
+summary(a)
+```
+
+```{r}
+a$rotation
+```
+
+```{r}
+biplot(x = a, scale = 0, cex = 0.6, col = c("blue4", "brown3"))
+```
+
+```{r}
+somb2<-raster("image_2.png")
+```
+
+```{r}
+plot(somb2, col = gray(0:100/100))
+```
+
+```{r}
+v2 <- Variogram(somb2)
+```
+
+```{r}
+plot(v2)
+```
+
+```{r}
+promedio2 <- mean(values(somb2))
+varianza2 <- var(values(somb2))
+desv_est2 <- sd(values(somb2))
+```
+
+```{r}
+promedio2
+varianza2
+desv_est2
+```
+
+```{r}
+modelo_teorico2 <- vgm(psill = varianza2*1.35, model = "Exp",
+                      range = 45, nugget = 100)
+```
+
+```{r}
+plot(modelo_teorico2, cutoff = 110)
+```
+
+```{r}
+p2 <- plot(modelo_teorico2, cutoff = 110)
+plot(p2$panel.args[[1]]$x, p2$panel.args[[1]]$y, type = "l",
+     xlim = c(0, 110), ylim = c(0, varianza*1.38))
+lines(v2@variogram$distance, v2@variogram$gamma, type = "b", col = "blue")
+```
+
+```{r}
+xy2 <- expand.grid(x = seq(1, 300, 1), y = seq(1, 150, 1))
+g.result2 <- gstat(formula = z ~ 1,
+                   locations = ~ x+y, 
+                   dummy = T,
+                   beta = promedio2,
+                   model = modelo_teorico2)
+result2 <- predict(g.result2, newdata = xy, nsim = 1)
+```
+
+```{r}
+ggplot(result2) +
+  geom_raster(aes(x, y, fill = sim1)) 
+```
+
+##funcion de densidad de kernel
+
+```{r}
+modelo_teorico3 <- vgm(psill = varianza2 * 1.15, model = "Gau", range = 40, nugget = 1e-6)
+```
+
+```{r}
+plot(modelo_teorico3, cutoff = 110)
+```
+
+```{r}
+p3 <- plot(modelo_teorico3, cutoff = 110)
+plot(p3$panel.args[[1]]$x, p3$panel.args[[1]]$y, type = "l",
+     xlim = c(0, 110), ylim = c(0, varianza*1.38))
+lines(v2@variogram$distance, v2@variogram$gamma, type = "b", col = "blue")
+```
